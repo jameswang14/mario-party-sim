@@ -12,13 +12,13 @@ For another example, consider `players = [(0, 0), (25, 0), (75, 0), (100, 0)]`. 
 
 ## Interesting Findings
 
-1. With equal skill, turn order affects win percentage
-  1a. Going First: ~+4%
-  1b. Going Second: ~+0.5%
-  1c. Going Third: ~-1.5%
-  1d. Going Fourth: ~-3%
-2. Even if you win every minigame, you only have around a 97% chance of winning the entire game
-3. To win 95% of games, you must be able win around 90% of minigames. 
+- With equal skill, turn order affects win percentage
+  - Going First: ~+4%
+  - Going Second: ~+0.5%
+  - Going Third: ~-1.5%
+  - Going Fourth: ~-3%
+- Even if you win every minigame, you only have around a 97% chance of winning the entire game
+- To win 95% of games, you must be able win around 90% of minigames. 
 
 ## TODO
 
