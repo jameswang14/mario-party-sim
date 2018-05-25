@@ -2,6 +2,7 @@ from Player import Player
 from GameStat import GameStat
 import random
 import math
+import utils
 
 # Based on averages from 5 multiplayer boards in Mario Party 7 #
 RED_PCT = 0.12524186787
@@ -239,7 +240,7 @@ class Game(object):
         self.stats.num_duels += 1
         ev = self.calc_duel_ev(p)
         duel_target = max(ev, key=ev.get)
-        win_pct = p.skill / (duel_target.skill + p.skill)
+        win_pct = p.skill / max((duel_target.skill + p.skill), 1)
         winner = duel_target
         loser = p
         if random.random() < win_pct:
@@ -282,7 +283,7 @@ class Game(object):
         ev = {}
         for x in self.players:
             if x == p: continue
-            win_pct = p.skill / (x.skill + p.skill)
+            win_pct = p.skill / max((x.skill + p.skill), 1)
             star_to_coins = 60 * math.exp(math.log(5) * (self.turn_num / self.max_turns))
             exp_val = win_pct * (1/6) * (0 + min(x.coins, 10) + x.coins/2 + x.coins + min(x.stars, 1) * star_to_coins + min(x.stars, 2) * star_to_coins)
             exp_val -= (1-win_pct) * (1/6) * (0 + min(p.coins, 10) + p.coins/2 + p.coins + min(p.stars, 1) * star_to_coins + min(x.stars, 2) * star_to_coins)
@@ -324,7 +325,8 @@ class Game(object):
 
 
 if __name__ == '__main__':
-    players = [(45, 0), (50, 0), (52, 0), (55, 0)]
+    players = [(0, 0), (25, 0), (75, 0), (100, 0)]
+    print("Chances of winning a 4-player Minigame: {}".format(utils.players_win_pct_4way(players)))
     wins = [0,0,0,0]
     n = 1000
     gs = GameStat()
@@ -333,11 +335,11 @@ if __name__ == '__main__':
         g.run()
         wins[g.get_winner()] += 1
         gs.num_games += 1
-    print([x/n for x in wins])
-    print(gs.num_duels)
-    print(gs.coins_from_duels)
-    print(gs.stars_from_duels)
-    print(gs.num_bowsers)
+    print("Percent of games won: {}".format([x/n for x in wins]))
+    # print(gs.num_duels)
+    # print(gs.coins_from_duels)
+    # print(gs.stars_from_duels)
+    # print(gs.num_bowsers)
 
 
 
