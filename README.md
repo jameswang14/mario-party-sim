@@ -4,7 +4,7 @@ Simulates multiple games of Mario Party, collecting and computing statistics all
 
 ## How To Run
 
-```python3 Game.py```
+```python3 main.py```
 
 Modify player skill values in `Game.py` in the players list in the first value of each tuple. Skill values represent how often each player wins at a single-player minigame, like a Bowser or DK minigame, and must be between 0-100. This translates directly to multiplayer minigame skill by comparing each players single-player skill. For example, for the following list `players = [(25, 0), (25, 0), (25, 0), (25, 0)]` each player has an equal chance to win a 4-player minigame, and a 25% chance to win a single-player minigame. 
 
@@ -18,7 +18,10 @@ For another example, consider `players = [(0, 0), (25, 0), (75, 0), (100, 0)]`. 
   - Going Third: ~-1.5%
   - Going Fourth: ~-3%
 - Even if you win every minigame, you only have around a 97% chance of winning the entire game
-- To win 95% of games, you must be able win around 90% of minigames. 
+
+![](https://github.com/jameswang14/mario-party-sim/blob/master/minigame_vs_wins.png)
+
+
 
 ## TODO
 
