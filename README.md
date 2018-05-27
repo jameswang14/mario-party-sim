@@ -27,6 +27,5 @@ For another example, consider `players = [(0, 0), (25, 0), (75, 0), (100, 0)]`. 
 
 There's a lot more exploration to be done with duels and choosing duel opponents, read comments in `Game.py` for more. 
 
-- 2v2 Minigames, 3v1 Minigames
 - Items
 - Shopping Star, Item Star
