@@ -1,8 +1,9 @@
-from Player import Player
-from GameStat import GameStat
 import random
 import math
 import utils
+import numpy as np
+from Player import Player
+from GameStat import GameStat
 
 # Based on averages from 5 multiplayer boards in Mario Party 7 #
 RED_PCT = 0.12524186787
@@ -12,6 +13,7 @@ BOWSER_PCT = 0.03283618376
 DUEL_PCT = 0.05211141851
 ITEM_PCT = 0.05778546277
 SHOP_PCT = 0.03283618376
+BLUE_PCT = 1 - (RED_PCT + GREEN_PCT + DK_PCT + BOWSER_PCT + DUEL_PCT)
 # ----------------------------------------------------------- #
 
 # Estimates
@@ -24,17 +26,22 @@ BOWSER_MIN_COIN_TAKE = 5
 BOWSER_MAX_COIN_TAKE = 50
 BATTLE_MINIGAME_PCT = 0.1
 
+def count(l, t):
+    return len([x for x in l if x == t])
+
 class Game(object):
     def __init__(self, players, max_turns, stats=GameStat()):
         self.players = [Player(x[0], x[1], ident=i) for i,x in enumerate(players)]
         self.total_skill = sum([x[0] for x in players])
         self.standings = []
+        self.minigame_assign = {}
         self.turn_num = 0
         self.max_turns = max_turns
         self.stats = stats
 
     def run(self):
         while self.turn_num < self.max_turns:
+            self.minigame_assign = {}
             self.turn()
             self.minigame()
             self.turn_num += 1
@@ -42,24 +49,73 @@ class Game(object):
 
     def minigame(self):
         win_amt = 0
+        battle = False
         # Battle Mini-game
         if random.random() < BATTLE_MINIGAME_PCT: 
+            battle = True
             bounty = 5 * random.choice([1, 2, 4, 6, 8, 10])
             for p in self.players:
                 win_amt += min(bounty, p.coins)
                 p.coins -= min(bounty, p.coins)
+            self.stats.num_battle += 1
+            self.stats.total_battle_bounty += win_amt
+
         else: win_amt = 10
+        # Battle or 4-player Minigame
+        if battle or count(self.minigame_assign.values(), 'blue') == 4 or count(self.minigame_assign.values(), 'red') == 4:
 
-        win_pcts = [p.skill/self.total_skill for p in self.players]
+            r = random.random()
+            p = 0.0
+            win_pcts = [p.skill/self.total_skill for p in self.players]
+            for i, pct in enumerate(win_pcts):
+                p += pct
+                if r < p:
+                    self.players[i].coins += win_amt
+                    self.players[i].minigames_won += 1
+                    break
 
-        r = random.random()
-        p = 0.0
-        for i, pct in enumerate(win_pcts):
-            p += pct
-            if r < p:
-                self.players[i].coins += win_amt
-                self.players[i].minigames_won += 1
-                break
+            self.stats.num_four_vs_four += 1
+
+        # 3v1 Minigame - we use the average skill of the group of 3 to calculate the chance they win the minigame
+        elif count(self.minigame_assign.values(), 'blue') == 3 or count(self.minigame_assign.values(), 'red') == 3:
+            dominant = 'blue'
+            if count(self.minigame_assign.values(), 'red') == 3: 
+                dominant = 'red'
+            three_team = [p for p in self.players if self.minigame_assign[p] == dominant]
+            single_team = [p for p in self.players if self.minigame_assign[p] != dominant]
+            avg_skill = np.mean([x.skill for x in three_team])
+            win_pct = avg_skill / (avg_skill + single_team[0].skill)
+
+            if random.random() < win_pct:
+                for x in three_team:
+                    x.coins += 10
+                    x.minigames_won += 1
+
+            else:
+                single_team[0].coins += 10
+                single_team[0].minigames_won += 1 
+
+            self.stats.num_three_vs_one += 1
+
+        # 2v2 Minigame - we use the average skill of each team to calculate their chance to win the minigame
+        else:
+            team_one = [p for p in self.players if self.minigame_assign[p] == 'blue']
+            team_two = [p for p in self.players if self.minigame_assign[p] == 'red']
+            avg_skill_one = np.mean([x.skill for x in team_one])
+            avg_skill_two = np.mean([x.skill for x in team_two])
+            win_pct = avg_skill_one / (avg_skill_one + avg_skill_two)
+
+            if random.random() < win_pct:
+                for x in team_one:
+                    x.coins += 10
+                    x.minigames_won += 1
+
+            else:
+                for x in team_two:
+                    x.coins += 10
+                    x.minigames_won += 1
+
+            self.stats.num_two_vs_two += 1
 
     def turn(self):
 
@@ -106,6 +162,7 @@ class Game(object):
             if r_space < RED_PCT:
                 p.red += 1
                 p.coins -= 3
+                self.minigame_assign[p] = 'red'
 
             # 4c. Green: +Coins/Star, -Coins, Teleport
             elif r_space < RED_PCT + GREEN_PCT:
@@ -126,6 +183,7 @@ class Game(object):
             # 4a. Blue: +3 coins
             else:
                 p.coins += 3
+                self.minigame_assign[p] = 'blue'
 
             # Make sure nothing is negative
             for x in self.players:
@@ -154,6 +212,9 @@ class Game(object):
             p.spaces_from_star = random.randint(0, MAX_STAR_DIST)
             if p.spaces_from_star == 0:
                 self.give_star(p) # Yes it's possible to get two stars in one turn!
+
+        if random.random() < 0.5: self.minigame_assign[p] = 'red'
+        else: self.minigame_assign[p] = 'blue'
 
         p.green += 1
 
@@ -196,6 +257,9 @@ class Game(object):
                         t = random.randint(BOWSER_MIN_COIN_TAKE, BOWSER_MAX_COIN_TAKE)
                         for x in self.players: x.coins -= t
 
+        self.minigame_assign[p] = 'red'
+
+
     # In other Mario Parties, DK usually does more. A star may only be acquired in single-player minigames
     def dk_square(self, p):
         # Single-Player DK
@@ -212,6 +276,8 @@ class Game(object):
             total_bananas = 35
             for x in self.players:
                 x.coins += int(x.skill/self.total_skill * total_bananas) * r_dk
+
+        self.minigame_assign[p] = 'blue'
 
     # Duels are especailly key since they can drastically turn a game around. Choosing an optimal 
     # duel opponent can be tricky, since it depends both on how many turns are remaining, how many stars/coins everyone has,
@@ -278,6 +344,9 @@ class Game(object):
             winner.stars += min(loser.stars, 2)
             loser.stars -= min(loser.stars, 2)
 
+        if random.random() < 0.5: self.minigame_assign[p] = 'red'
+        else: self.minigame_assign[p] = 'blue'
+
 
     def calc_duel_ev(self, p):
         ev = {}
@@ -322,24 +391,5 @@ class Game(object):
     def get_winner(self):
         self.update_standings()
         return self.standings[0].id
-
-
-if __name__ == '__main__':
-    players = [(0, 0), (25, 0), (75, 0), (100, 0)]
-    print("Chances of winning a 4-player Minigame: {}".format(utils.players_win_pct_4way(players)))
-    wins = [0,0,0,0]
-    n = 1000
-    gs = GameStat()
-    for x in range(0, n):
-        g = Game(players, 15, stats=gs)
-        g.run()
-        wins[g.get_winner()] += 1
-        gs.num_games += 1
-    print("Percent of games won: {}".format([x/n for x in wins]))
-    # print(gs.num_duels)
-    # print(gs.coins_from_duels)
-    # print(gs.stars_from_duels)
-    # print(gs.num_bowsers)
-
 
 
