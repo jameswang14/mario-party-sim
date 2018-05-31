@@ -17,7 +17,7 @@ For another example, consider `players = [(0, 0), (25, 0), (75, 0), (100, 0)]`. 
   - Going Second: ~+0.5%
   - Going Third: ~-1.5%
   - Going Fourth: ~-3%
-- Even if you win every minigame, you only have around a 97% chance of winning the entire game
+- Even if you win every minigame, you only have around a 94% chance of winning the entire game if you go first. 
 
 ![](https://github.com/jameswang14/mario-party-sim/blob/master/minigame_vs_wins.png)
 
