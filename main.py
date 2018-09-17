@@ -24,13 +24,13 @@ def win_pct_by_turn():
                 win_pcts[i].append(trial(players, n)[i])
 
     print("done")
-    for i in range(0, len(minigame_win_pcts)):
-        plt.plot(minigame_win_pcts[i], win_pcts[i])
-        plt.legend(['First', 'Second', 'Third', 'Fourth'])
-    plt.title("Percent of Games Won Based on Minigame Win Percent and Turn Order")
-    plt.xlabel("4-player Minigame Win Percent")
-    plt.ylabel("Win Percent")
-    plt.show()
+    # for i in range(0, len(minigame_win_pcts)):
+    #     plt.plot(minigame_win_pcts[i], win_pcts[i])
+    #     plt.legend(['First', 'Second', 'Third', 'Fourth'])
+    # plt.title("Percent of Games Won Based on Minigame Win Percent and Turn Order")
+    # plt.xlabel("4-player Minigame Win Percent")
+    # plt.ylabel("Win Percent")
+    # plt.show()
 
 
 def trial(players, n, gs=GameStat()):
@@ -40,7 +40,8 @@ def trial(players, n, gs=GameStat()):
         g.run()
         wins[g.get_winner()] += 1
         gs.num_games += 1
+    gs.print_stats_avg()
     return [x/n for x in wins]
 
 if __name__ == '__main__':
-    win_pct_by_turn()
+    print(trial([(25,0), (25,0), (25,0), (25,0)], 10000))

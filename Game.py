@@ -42,6 +42,7 @@ class Game(object):
     def run(self):
         while self.turn_num < self.max_turns:
             self.minigame_assign = {}
+            self.update_standings() 
             self.turn()
             self.minigame()
             self.turn_num += 1
@@ -57,8 +58,8 @@ class Game(object):
             for p in self.players:
                 win_amt += min(bounty, p.coins)
                 p.coins -= min(bounty, p.coins)
-            self.stats.num_battle += 1
-            self.stats.total_battle_bounty += win_amt
+            self.stats.inc("num_battle")
+            self.stats.inc("total_battle_bounty", win_amt)
 
         else: win_amt = 10
         # Battle or 4-player Minigame
@@ -74,7 +75,7 @@ class Game(object):
                     self.players[i].minigames_won += 1
                     break
 
-            self.stats.num_four_vs_four += 1
+            self.stats.inc("num_four_vs_four")
 
         # 3v1 Minigame - we use the average skill of the group of 3 to calculate the chance they win the minigame
         elif count(self.minigame_assign.values(), 'blue') == 3 or count(self.minigame_assign.values(), 'red') == 3:
@@ -95,7 +96,7 @@ class Game(object):
                 single_team[0].coins += 10
                 single_team[0].minigames_won += 1 
 
-            self.stats.num_three_vs_one += 1
+            self.stats.inc("num_three_vs_one")
 
         # 2v2 Minigame - we use the average skill of each team to calculate their chance to win the minigame
         else:
@@ -115,7 +116,7 @@ class Game(object):
                     x.coins += 10
                     x.minigames_won += 1
 
-            self.stats.num_two_vs_two += 1
+            self.stats.inc("num_two_vs_two")
 
     def turn(self):
 
@@ -142,7 +143,9 @@ class Game(object):
             # 2. Check if star is passed
             if p.spaces_from_star <= 0:
                 if p.coins >= 20:
-                    self.give_star(p)
+                    self.buy_star(p)
+                    self.move_star()
+                    self.stats.inc("num_stars")
                 else:
                     p.spaces_from_star = MAX_STAR_DIST + p.spaces_from_star
 
@@ -211,9 +214,10 @@ class Game(object):
         if r == 3:
             p.spaces_from_star = random.randint(0, MAX_STAR_DIST)
             if p.spaces_from_star == 0:
-                self.give_star(p) # Yes it's possible to get two stars in one turn!
+                self.buy_star(p) # Yes it's possible to get two stars in one turn!
+                self.stats.inc("num_stars")
 
-        if random.random() < 0.5: self.minigame_assign[p] = 'red'
+        if random.random() < 0.3: self.minigame_assign[p] = 'red' # with a 50/50 chance, I noticed the number of 1v3 minigames seemed higher than it should be
         else: self.minigame_assign[p] = 'blue'
 
         p.green += 1
@@ -221,7 +225,7 @@ class Game(object):
     # Bowser really differs from game to game, but we keep it simple and assume
     # he either straight up takes from you or forces you to play a minigame
     def bowser_square(self, p):
-        self.stats.num_bowsers += 1
+        self.stats.inc("num_bowsers")
 
         # Bowser straight up takes stuff from you
         if random.random() < (1-BOWSER_MINIGAME_PCT):
@@ -298,14 +302,20 @@ class Game(object):
     # way more valuable as turns pass. So we assign stars a base value of 60 coins and exponentially scale their value up to 300 as 
     # time increases. This increase potential upside for those not in first. 
     # 
-    # Time should also increase potential downside for people in higher levels (TODO)
+    # Time should also increase potential downside for winning players (TODO)
     # 
     # And because only first place matters, we calculate EV relative to first place. So if you're in first place, EV is based off 
     # your "distance" to second place. For all other positions, EV is your "distance" to first place. Distance is measured by coins (after conversion).
     def duel_square(self, p):
-        self.stats.num_duels += 1
+        self.stats.inc("num_duels")
         ev = self.calc_duel_ev(p)
         duel_target = max(ev, key=ev.get)
+
+        if p != self.standings[0]:
+            self.stats.inc("num_duels_by_not_first")
+            if duel_target == self.standings[0]:
+                self.stats.inc("duel_top_player")
+
         win_pct = p.skill / max((duel_target.skill + p.skill), 1)
         winner = duel_target
         loser = p
@@ -316,31 +326,31 @@ class Game(object):
         opt = random.choice([1,2,3,4,5,6])
         # Win 10 coins
         if opt == 2:
-            self.stats.coins_from_duels += min(loser.coins, 10)
+            self.stats.inc("coins_from_duels", min(loser.coins, 10))
             winner.coins += min(loser.coins, 10)
             loser.coins -= min(loser.coins, 10)
 
         # Win half coins
         if opt == 3:
-            self.stats.coins_from_duels += loser.coins / 2
+            self.stats.inc("coins_from_duels", loser.coins / 2)
             winner.coins += loser.coins / 2
             loser.coins /= 2
 
         # Win all coins
         if opt == 4:
-            self.stats.coins_from_duels += loser.coins 
+            self.stats.inc("coins_from_duels", loser.coins)
             winner.coins += loser.coins
             loser.coins = 0
 
         # Win one star
         if opt == 5:
-            self.stats.stars_from_duels += min(loser.stars, 1)
+            self.stats.inc("stars_from_duels", min(loser.stars, 1))
             winner.stars += min(loser.stars, 1)
             loser.stars -= min(loser.stars, 1)
 
         # Win two stars
         if opt == 6:
-            self.stats.stars_from_duels += min(loser.stars, 2)
+            self.stats.inc("stars_from_duels", min(loser.stars, 2))
             winner.stars += min(loser.stars, 2)
             loser.stars -= min(loser.stars, 2)
 
@@ -362,9 +372,11 @@ class Game(object):
     def roll(self):
         return random.randint(0, 10)
 
-    def give_star(self, p):
+    def buy_star(self, p):
         p.stars += 1
         p.coins -= 20
+
+    def move_star(self):
         new_star = random.randint(MIN_STAR_DIST, MAX_STAR_DIST)
         for x in self.players:
             x.spaces_from_star = min(5, new_star-x.spaces_from_star)
