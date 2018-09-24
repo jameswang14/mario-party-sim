@@ -204,6 +204,8 @@ class Game(object):
             p.coins += random.randint(1, 20)
             if random.random() <= GREEN_STAR_PCT:
                 p.stars += 1
+                self.stats.inc("green_star")
+                self.stats.inc("num_stars")
 
         # -Coins - I don't think there are any green spaces that make you lose coins in MP7, but 
         # they're usually present in other games so I've included it here

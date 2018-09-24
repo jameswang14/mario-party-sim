@@ -5,6 +5,7 @@ class Player(object):
         self.strat_bonus = 1.0+strat_bonus
         self.wins = 0
         self.id = ident
+        self.items = []
     def __str__(self):
         return "Stars: {}, Coins: {}, Skill: {}".format(self.stars, self.coins, self.skill)
     def reset(self):
@@ -16,6 +17,6 @@ class Player(object):
         self.coins_spent = 0
         self.spaces_from_star = 0
         self.stars = 0
-        self.items = 0
+        self.items = []
         self.minigames_won = 0
         

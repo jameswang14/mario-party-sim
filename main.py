@@ -44,4 +44,4 @@ def trial(players, n, gs=GameStat()):
     return [x/n for x in wins]
 
 if __name__ == '__main__':
-    print(trial([(25,0), (25,0), (25,0), (25,0)], 10000))
+    print(trial([(100,0), (0,0), (0,0), (0,0)], 10000))
